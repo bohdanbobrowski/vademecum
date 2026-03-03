@@ -135,9 +135,9 @@ function postlatlong_show_nearest($atts) {
     $output = "<h3 class=\"wp-block-heading\">"._("Zobacz inne synagogi najbliżej:")."</h3>\n";
     if (isset($post_meta['post_long']) && isset($post_meta['post_lat']) && $post_meta['post_long'][0] && $post_meta['post_lat'][0]) {
         $query = "SELECT post_id, ST_AsText(latlong) as latlong, ST_DISTANCE(ST_GeomFromText('POINT(".$post_meta['post_lat'][0]." ".$post_meta['post_long'][0].")'),latlong) AS dist FROM synagogues_postlatlong WHERE post_id <> {$post->ID} ORDER BY dist LIMIT {$limit};";
-        $output .= "<code>".$query."</code>";
-        $output .= "<pre>".print_r($ids, TRUE)."</pre>";
         $ids = array_map(function($a) {return $a->post_id;}, $wpdb->get_results($query));
+        // $output .= "<code>".$query."</code>";
+        // $output .= "<pre>".print_r($ids, TRUE)."</pre>";        
         if($ids) {
             $output .= "<ul>\n";
             foreach ($ids as $id) {   
