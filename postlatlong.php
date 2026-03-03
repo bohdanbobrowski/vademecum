@@ -17,11 +17,13 @@ Text Domain: postlatlong
 
 register_activation_hook( __FILE__, 'postlatlong_activate');
 register_deactivation_hook( __FILE__, 'postlatlong_deactivate');
+
 add_action('admin_init','postlatlong_admin');
 add_action('admin_head', 'postlatlong_admin_css' );
 add_action('save_post','save_metabox_postlatlong');
 add_action('wp_head', 'postlatlong_meta', 1);
-add_filter('the_content', 'postlatlong_add_map');
+
+add_shortcode('postlatlong-map','postlatlong_add_map');
 add_shortcode('postlatlong-nearest','postlatlong_show_nearest');
 
 # On activate
@@ -112,28 +114,29 @@ function postlatlong_meta() {
 }
 
 # Print map
-function postlatlong_add_map($content) {
+function postlatlong_add_map() {
+    $output = "<h3 class=\"wp-block-heading\">"._("Na mapie:")."</h3>\n";
     global $post;
     $post_meta = get_post_meta($post->ID);
     if (isset($post_meta['post_long']) && isset($post_meta['post_lat']) && isset($post_meta['post_address']) && $post_meta['post_long'][0] && $post_meta['post_lat'][0]) {
         $icon_url = "/wp-content/themes/synagogu.es/assets/img/star_of_david_full_blue.png";
         $shortcode = "[leaflet-map][leaflet-marker lat=".$post_meta['post_lat'][0]." lng=".$post_meta['post_long'][0]." iconurl=\"".$icon_url."\"]";
         $shortcode = $shortcode . "<a href=\"https://www.google.com/maps?q=".$post_meta['post_lat'][0].",".$post_meta['post_long'][0]."\" target=\"_blank\" rel=\"noopener\">".$post_meta['post_address'][0]."</a>[/leaflet-marker]";
-        $content = $content . "\n\n" . do_shortcode($shortcode);
+        $output .= "\n\n" . do_shortcode($shortcode);
     }    
-    return $content;
+    return $output;
 }
 
 # Print list of nearest
-function postlatlong_show_nearest() {
+function postlatlong_show_nearest($atts) {
+    $limit = isset($atts['limit']) ? $atts['limit'] : 5;
     global $geotag_table, $wpdb, $post;
     $post_meta = get_post_meta($post->ID);
-    $output = "";
-    $output .= "<h3 class=\"wp-block-heading\">"._("Najbliżej:")."</h3>";
+    $output = "<h3 class=\"wp-block-heading\">"._("Zobacz inne synagogi najbliżej:")."</h3>\n";
     if (isset($post_meta['post_long']) && isset($post_meta['post_lat']) && $post_meta['post_long'][0] && $post_meta['post_lat'][0]) {
-        $query = "SELECT post_id, ST_AsText(latlong) as latlong, ST_DISTANCE(ST_GeomFromText('POINT(".$post_meta['post_lat'][0]." ".$post_meta['post_long'][0].")'),latlong) AS dist FROM synagogues_postlatlong WHERE post_id <> ".$post->ID." ORDER BY dist LIMIT 5;";
-        // $output .= "<code>".$query."</code>";
-        // $output .= "<pre>".print_r($ids, TRUE)."</pre>";
+        $query = "SELECT post_id, ST_AsText(latlong) as latlong, ST_DISTANCE(ST_GeomFromText('POINT(".$post_meta['post_lat'][0]." ".$post_meta['post_long'][0].")'),latlong) AS dist FROM synagogues_postlatlong WHERE post_id <> {$post->ID} ORDER BY dist LIMIT {$limit};";
+        $output .= "<code>".$query."</code>";
+        $output .= "<pre>".print_r($ids, TRUE)."</pre>";
         $ids = array_map(function($a) {return $a->post_id;}, $wpdb->get_results($query));
         if($ids) {
             $output .= "<ul>\n";
