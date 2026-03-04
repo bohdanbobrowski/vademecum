@@ -4,14 +4,14 @@
  */
 /*
 Plugin Name: PostLatLong
-Plugin URI: https://bobrowski.com.pl/
+Plugin URI: https://github.com/bohdanbobrowski/postlatlong
 Description: Save post latitude and longitude, draw post position on map and show nearest posts
 Version: 0.1
 Requires at least: 6.0
 Requires PHP: 8.2
 Author: Bohdan Bobrowski
 Author URI: https://bohdan.bobrowski.com.pl
-License:
+License: MIT
 Text Domain: postlatlong
 */
 
@@ -26,25 +26,36 @@ add_action('wp_head', 'postlatlong_meta', 1);
 add_shortcode('postlatlong-map','postlatlong_add_map');
 add_shortcode('postlatlong-nearest','postlatlong_show_nearest');
 
+add_action( 'admin_menu', 'postlatlong_settings' );
+
 # On activate
 function postlatlong_activate(){
-    global $wpdb;
+    global $wpdb, $table_prefix;
     if ( ! is_plugin_active( 'leaflet-map/leaflet-map.php' ) and current_user_can( 'activate_plugins' ) ) {        
         wp_die('Sorry, but this plugin requires the leaflet-map installed and active. <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Return to Plugins</a>');
     }
-    $wpdb->get_results("CREATE VIEW IF NOT EXISTS synagogues_postlatlong AS SELECT post_id, POINT(SUM(CASE WHEN meta_key=\"post_lat\" THEN meta_value ELSE 0 END), SUM(CASE WHEN meta_key=\"post_long\" THEN meta_value ELSE 0 END)) as latlong FROM synagogues_postmeta WHERE (abs(meta_value) > 0 AND meta_value IS NOT NULL) AND (meta_key=\"post_long\" OR meta_key=\"post_lat\") GROUP BY post_id;");
+    // Can't create views on many shared hostings so decided to create table
+    $create_table_query = "CREATE TABLE IF NOT EXISTS {$table_prefix}postlatlong (post_id INT NOT NULL PRIMARY KEY, latlong POINT NOT NULL) ";
+    $create_table_query .= "SELECT post_id, POINT(SUM(CASE WHEN meta_key=\"post_lat\" THEN meta_value ELSE 0 END), SUM(CASE WHEN meta_key=\"post_long\" THEN meta_value ELSE 0 END)) as latlong FROM {$table_prefix}postmeta WHERE (abs(meta_value) > 0 AND meta_value IS NOT NULL) AND (meta_key=\"post_long\" OR meta_key=\"post_lat\") ";
+    $create_table_query .= "GROUP BY post_id;";
+    $wpdb->get_results($create_table_query);
 }
 
 # On activate
 function postlatlong_deactivate(){
-    global $wpdb;
-    $wpdb->get_results("DROP VIEW IF EXISTS synagogues_postlatlong;");
+    global $wpdb, $table_prefix;
+    $wpdb->get_results("DROP TABLE IF EXISTS {$table_prefix}postlatlong;");
 }
 
 # Admin post edit form 
 function postlatlong_admin()
 {
     add_meta_box("Post coordinates", "Post coordinates", "postlatlong_admin_form", "post", "side", "high");
+    // Add settings
+    register_setting( 'postlatlong_options', 'postlatlong_options', 'postlatlong_options_validate' );
+    add_settings_section( 'display_settings', 'Titles and labels', 'postlatlong_section_text', 'postlatlong' );
+    add_settings_field( 'postlatlong_map_title', 'Map title', 'postlatlong_map_title', 'postlatlong', 'display_settings' );
+    add_settings_field( 'postlatlong_nearest_title', 'Nearest list title', 'postlatlong_nearest_title', 'postlatlong', 'display_settings' );
 }
 function postlatlong_admin_form(){
     global $post;
@@ -95,11 +106,18 @@ function postlatlong_admin_css() {
 # Save lat/long and adresss
 function save_metabox_postlatlong($post_id)
 {
+    global $wpdb, $table_prefix;
     $post_lat = $_POST['post_lat'];
     $post_long = $_POST['post_long'];
     $post_address = $_POST['post_address'];
     update_post_meta( $post_id, 'post_lat', $post_lat );
     update_post_meta( $post_id, 'post_long', $post_long );
+    // I know this is maybe not the most efficient way to store same data in two separate columns, but here is the only resonable thing that comes to my mind 
+    if($post_lat && $post_long) {
+        $wpdb->get_results("INSERT INTO `{$table_prefix}postlatlong` (`post_id`, `latlong`) VALUES ({$post_id}, ST_GeomFromText('POINT({$post_lat} {$post_long})'));");
+    } else {
+        $wpdb->get_results("DELETE FROM `{$table_prefix}postlatlong` WHERE `{$table_prefix}postlatlong`.`post_id` = {$post_id};");
+    }
     update_post_meta( $post_id, 'post_address', $post_address );
 }
 
@@ -115,13 +133,18 @@ function postlatlong_meta() {
 
 # Print map
 function postlatlong_add_map() {
-    $output = "<h3 class=\"wp-block-heading\">"._("Na mapie:")."</h3>\n";
     global $post;
+    $output = "";
     $post_meta = get_post_meta($post->ID);
-    if (isset($post_meta['post_long']) && isset($post_meta['post_lat']) && isset($post_meta['post_address']) && $post_meta['post_long'][0] && $post_meta['post_lat'][0]) {
+    if (isset($post_meta['post_long']) && isset($post_meta['post_lat']) && $post_meta['post_long'][0] && $post_meta['post_lat'][0]) {
+        $options = get_option('postlatlong_options');
+        if (isset($options['postlatlong_map_title']) && $options['postlatlong_map_title']) {
+            $output = "<h3 class=\"wp-block-heading\">{$options['postlatlong_map_title']}</h3>\n";
+        }
         $icon_url = "/wp-content/themes/synagogu.es/assets/img/star_of_david_full_blue.png";
         $shortcode = "[leaflet-map][leaflet-marker lat=".$post_meta['post_lat'][0]." lng=".$post_meta['post_long'][0]." iconurl=\"".$icon_url."\"]";
-        $shortcode = $shortcode . "<a href=\"https://www.google.com/maps?q=".$post_meta['post_lat'][0].",".$post_meta['post_long'][0]."\" target=\"_blank\" rel=\"noopener\">".$post_meta['post_address'][0]."</a>[/leaflet-marker]";
+        $post_address = isset($post_meta['post_address']) && $post_meta['post_address'][0] ? $post_meta['post_address'][0] : $post->post_title;
+        $shortcode = $shortcode . "<a href=\"https://www.google.com/maps?q=".$post_meta['post_lat'][0].",".$post_meta['post_long'][0]."\" target=\"_blank\" rel=\"noopener\">{$post_address}</a>[/leaflet-marker]";
         $output .= "\n\n" . do_shortcode($shortcode);
     }    
     return $output;
@@ -129,12 +152,16 @@ function postlatlong_add_map() {
 
 # Print list of nearest
 function postlatlong_show_nearest($atts) {
+    global $geotag_table, $wpdb, $post, $table_prefix;
+    $output = "";
     $limit = isset($atts['limit']) ? $atts['limit'] : 5;
-    global $geotag_table, $wpdb, $post;
     $post_meta = get_post_meta($post->ID);
-    $output = "<h3 class=\"wp-block-heading\">"._("Zobacz inne synagogi najbliżej:")."</h3>\n";
     if (isset($post_meta['post_long']) && isset($post_meta['post_lat']) && $post_meta['post_long'][0] && $post_meta['post_lat'][0]) {
-        $query = "SELECT post_id, ST_AsText(latlong) as latlong, ST_DISTANCE(ST_GeomFromText('POINT(".$post_meta['post_lat'][0]." ".$post_meta['post_long'][0].")'),latlong) AS dist FROM synagogues_postlatlong WHERE post_id <> {$post->ID} ORDER BY dist LIMIT {$limit};";
+        $options = get_option('postlatlong_options');
+        if (isset($options['postlatlong_nearest_title']) && $options['postlatlong_nearest_title']) {
+            $output = "<h3 class=\"wp-block-heading\">{$options['postlatlong_nearest_title']}</h3>\n";
+        }
+        $query = "SELECT post_id, ST_AsText(latlong) as latlong, ST_DISTANCE(ST_GeomFromText('POINT(".$post_meta['post_lat'][0]." ".$post_meta['post_long'][0].")'),latlong) AS dist FROM {$table_prefix}postlatlong WHERE post_id <> {$post->ID} ORDER BY dist LIMIT {$limit};";
         $ids = array_map(function($a) {return $a->post_id;}, $wpdb->get_results($query));
         // $output .= "<code>".$query."</code>";
         // $output .= "<pre>".print_r($ids, TRUE)."</pre>";        
@@ -148,4 +175,41 @@ function postlatlong_show_nearest($atts) {
         }
     }
     return $output;
+}
+
+
+function postlatlong_settings() {
+    add_options_page( 'PostLatLong Settings', 'PostLatLong', 'manage_options', 'postlatlong', 'postlatlong_settings_page' );
+}
+
+function postlatlong_settings_page() {
+    ?>
+    <h2>PostLatLong Settings</h2>
+    <form action="options.php" method="post">
+        <?php 
+        settings_fields('postlatlong_options');
+        do_settings_sections('postlatlong');
+        ?>
+        <input name="submit" class="button button-primary" type="submit" value="<?php esc_attr_e( 'Save' ); ?>" />
+    </form>
+    <?php
+}
+
+function postlatlong_section_text() {
+    echo '<p>Here you can set how map and list headers should be displayed.</p>';
+}
+
+function postlatlong_map_title() {
+    $options = get_option('postlatlong_options');
+    echo "<input id=\"postlatlong_map_title\" name=\"postlatlong_options[postlatlong_map_title]\" type=\"text\" value=\"".esc_attr($options['postlatlong_map_title'])."\" />";
+}
+
+function postlatlong_nearest_title() {
+    $options = get_option('postlatlong_options');
+    echo "<input id=\"postlatlong_nearest_title\" name=\"postlatlong_options[postlatlong_nearest_title]\" type=\"text\" value=\"".esc_attr($options['postlatlong_nearest_title'])."\" />";
+}
+
+function postlatlong_options_validate( $input ) {
+    // Do nothung for now
+    return $input;
 }
