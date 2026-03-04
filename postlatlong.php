@@ -17,6 +17,10 @@ Text Domain: postlatlong
 
 register_activation_hook( __FILE__, 'postlatlong_activate');
 register_deactivation_hook( __FILE__, 'postlatlong_deactivate');
+register_rest_field( 'post', 'metadata', array(
+    'get_callback' => function ( $data ) {
+        return get_post_meta( $data['id'], '', '' );
+},)); # this line adds post metadata in API response
 
 add_action('admin_init','postlatlong_admin');
 add_action('admin_head', 'postlatlong_admin_css' );
