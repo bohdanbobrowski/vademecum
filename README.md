@@ -1,6 +1,6 @@
-# PostLatLong
+# Vade Mecum
 
-Simple wordpress plugin which:
+Wordpress plugin which:
 - adds post meta fields for longitude, latitude and address (nothing is validated!),
 - prints meta tags with **geo.position** and **geo.placename** (which is post title) in page header,
 - draws a map with post position at the on of post content using [leaflet-map](https://github.com/bozdoz/wp-plugin-leaflet-map) plugin which is required btw,
@@ -44,7 +44,7 @@ If you're using API to write your posts just use metadata fields like in this py
 
 ### Draw a map with post location
 
-    [postlatlong-map]
+    [vademecum-map]
 
 This is handled with [leaflet-map](https://github.com/bozdoz/wp-plugin-leaflet-map), so this plugin must be installed and configured.
 
@@ -54,8 +54,8 @@ Example on [synagogu.es](https://synagogu.es/2025/09/07/kepno/):
 
 ### Show list of nearest posts
 
-    [postlatlong-nearest]
-    [postlatlong-nearest limit=10]
+    [vademecum-nearest]
+    [vademecum-nearest limit=10]
 
 Example on [synagogu.es](https://synagogu.es/2025/09/07/kepno/) - list shows nearest synagogues to the one which is currently displayed:
 
