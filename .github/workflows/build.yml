@@ -12,11 +12,11 @@ jobs:
     steps:
       - name: Zip Folder
         run: |
-          cd ../ # I added this
+          cd ../
           rm -rf vademecum.zip
           zip -r vademecum.zip vademecum -x ".git/*" ".github/*"
       - uses: actions/upload-artifact@v4
         with:
           name: vademecum.zip
-          path: vademecum.zip        
+          path: ../vademecum.zip        
 
