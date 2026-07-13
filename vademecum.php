@@ -6,7 +6,7 @@
 Plugin Name: VadeMecum
 Plugin URI: https://github.com/bohdanbobrowski/vademecum
 Description: Save post latitude and longitude, draw post position on map and show nearest posts
-Version: 0.1
+Version: 0.2
 Requires at least: 6.0
 Requires PHP: 8.2
 Author: Bohdan Bobrowski
@@ -14,6 +14,16 @@ Author URI: https://bohdan.bobrowski.com.pl
 License: MIT
 Text Domain: vademecum
 */
+
+// Exit if accessed directly
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly
+}
+
+// Define plugin constants
+define( 'VADEMECUM_VERSION', '0.2' );
+define( 'VADEMECUM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'VADEMECUM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 register_activation_hook( __FILE__, 'vademecum_activate');
 register_deactivation_hook( __FILE__, 'vademecum_deactivate');

@@ -55,7 +55,8 @@ Example on [synagogu.es](https://synagogu.es/2025/09/07/kepno/):
 ### Show list of nearest posts
 
     [vademecum-nearest]
-    [vademecum-nearest limit=10]
+    [
+    -nearest limit=10]
 
 Example on [synagogu.es](https://synagogu.es/2025/09/07/kepno/) - list shows nearest synagogues to the one which is currently displayed:
 
