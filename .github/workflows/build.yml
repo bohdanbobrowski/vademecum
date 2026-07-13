@@ -11,4 +11,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Generate zip
-      uses: alleyinteractive/action-release@develop
+      uses: shopware/github-actions/build-zip@main
