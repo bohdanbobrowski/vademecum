@@ -13,10 +13,8 @@ jobs:
       - name: Zip Folder
         run: |
           cd ../
-          pwd
           rm -rf vademecum.zip
           zip -r vademecum.zip vademecum -x ".git/*" ".github/*"
-          ls -alh
       - uses: actions/upload-artifact@v7
         with:
           name: vademecum.zip
