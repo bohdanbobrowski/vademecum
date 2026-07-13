@@ -15,4 +15,8 @@ jobs:
           cd ../ # I added this
           rm -rf vademecum.zip
           zip -r vademecum.zip vademecum -x ".git/*" ".github/*"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blog2epub_v1.5.0_macos.dmg
+          path: ./dist/blog2epub_v1.5.0_macos.dmg          
 
