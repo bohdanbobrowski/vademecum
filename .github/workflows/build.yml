@@ -10,5 +10,9 @@ jobs:
     name: Build release zip
     runs-on: ubuntu-latest
     steps:
-    - name: Generate zip
-      uses: shopware/github-actions/build-zip@main
+      - name: Zip Folder
+        run: |
+          cd ../ # I added this
+          rm -rf vademecum.zip
+          zip -r vademecum.zip vademecum -x ".git/*" ".github/*"
+
