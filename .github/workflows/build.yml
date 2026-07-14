@@ -13,9 +13,9 @@ jobs:
       - name: Zip Folder
         run: |
           cd ../
-          zip -r /tmp/vademecum.zip vademecum -x "vademecum/.git" -x "vademecum/.github" -x "vademecum/*.zip"
+          zip -r /tmp/vademecum_0.2.1.zip vademecum -x "vademecum/.git*"
       - uses: actions/upload-artifact@v7
         with:
           name: vademecum_0.2.1.zip
-          path: /tmp/vademecum.zip
+          path: /tmp/vademecum_0.2.1.zip
           archive: false
