@@ -10,12 +10,12 @@ jobs:
     name: Build release zip
     runs-on: ubuntu-latest
     steps:
-      # - name: Zip Folder
-      #   run: |
-      #     cd ../
+      - name: Zip Folder
+        run: |
+          cd ../
       #     rm -rf vademecum/vademecum.zip
       #     zip -r vademecum/vademecum.zip vademecum -x "vademecum/.git" -x "vademecum/.github" -x "vademecum/*.zip"
       - uses: actions/upload-artifact@v7
         with:
           name: vademecum_0.2.1.zip
-          path: .
+          path: vademecum
