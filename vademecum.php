@@ -6,7 +6,7 @@
 Plugin Name: VadeMecum
 Plugin URI: https://github.com/bohdanbobrowski/vademecum
 Description: Save post latitude and longitude, draw post position on map and show nearest posts
-Version: 0.2
+Version: 0.2.1
 Requires at least: 6.0
 Requires PHP: 8.2
 Author: Bohdan Bobrowski
@@ -124,9 +124,16 @@ function vademecum_admin_css() {
 function save_metabox_vademecum($post_id)
 {
     global $wpdb, $table_prefix;
-    $post_lat = $_POST['post_lat'];
-    $post_long = $_POST['post_long'];
-    $post_address = $_POST['post_address'];
+    $post_lat = $post_long = $post_address = "";
+    if(isset($_POST['post_lat'])) {
+        $post_lat = $_POST['post_lat'];
+    }
+    if(isset($_POST['post_long'])) {
+        $post_long = $_POST['post_long'];
+    }
+    if(isset($_POST['post_address'])) {
+        $post_address = $_POST['post_address'];
+    }
     update_post_meta( $post_id, 'post_lat', $post_lat );
     update_post_meta( $post_id, 'post_long', $post_long );
     // I know this is maybe not the most efficient way to store same data in two separate columns, but here is the only resonable thing that comes to my mind 
@@ -141,10 +148,12 @@ function save_metabox_vademecum($post_id)
 # Print metadata
 function vademecum_meta() {    
     global $post;
-    $post_meta = get_post_meta($post->ID);
-    if (isset($post_meta['post_long']) && isset($post_meta['post_lat'])) {
-        echo "<meta name=\"geo.position\" content=\"".$post_meta['post_lat'][0].";".$post_meta['post_long'][0]."\">\n";
-        echo "<meta name=\"geo.placename\" content=\"".$post->post_title."\">\n";
+    if($post) {
+        $post_meta = get_post_meta($post->ID);
+        if (isset($post_meta['post_long']) && isset($post_meta['post_lat'])) {
+            echo "<meta name=\"geo.position\" content=\"".$post_meta['post_lat'][0].";".$post_meta['post_long'][0]."\">\n";
+            echo "<meta name=\"geo.placename\" content=\"".$post->post_title."\">\n";
+        }
     }
 }
 
